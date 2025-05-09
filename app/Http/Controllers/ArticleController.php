@@ -26,11 +26,13 @@ class ArticleController extends Controller
         ]);
 
         $articles = $this->articleService->index($filters);
-
         return response()->json($articles);
     }
     public function store(ApiArticleRequest $request)
     {
+        if (auth()->user()->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 403); 
+        }
         $data = $request->only(['title', 'content', 'category_id']);
         $data['status'] = 'draft';
         $data['user_id'] = auth()->id();
@@ -44,6 +46,10 @@ class ArticleController extends Controller
     }
     public function update(ArticleUpdateRequest $request, $id)
     {
+        if (auth()->user()->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 403);  
+        }
+
         $article = Article::findOrFail($id);
 
         $data = $request->only(['title', 'content', 'category_id']);
@@ -51,12 +57,15 @@ class ArticleController extends Controller
         $data['video'] = $request->file('video');
         $data['tags'] = $request->tags;
 
-        $article = $this->articleService->update($article, $data);
+        $updatedArticle = $this->articleService->update($data, $id);
 
-        return response()->json($article);
+        return response()->json($updatedArticle);
     }
     public function destroy($id)
     {
+        if (auth()->user()->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 403);  
+        }
         $article = Article::findOrFail($id);
         $this->articleService->destroy($article);
 

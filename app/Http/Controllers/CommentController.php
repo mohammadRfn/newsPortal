@@ -20,8 +20,12 @@ class CommentController extends Controller
         $data = $request->only(['content']);
         $data['user_id'] = auth()->id();
         $data['article_id'] = $articleId;
+        
+        if ($request->has('parent_id')) {
+            $data['parent_id'] = $request->parent_id;
+        }
 
-        $comment = $this->commentService->create($data);
+        $comment = $this->commentService->store($data);
 
         return response()->json($comment, 201);
     }
@@ -29,6 +33,6 @@ class CommentController extends Controller
     {
         $comment = Comment::findOrFail($commentId);
 
-        return $this->commentService->delete($comment);
+        return $this->commentService->destroy($comment);
     }
 }

@@ -6,6 +6,7 @@ use App\Models\Article;
 use App\Models\Setting;
 use App\Models\Tag;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ArticleService
 {
@@ -33,7 +34,9 @@ class ArticleService
                       ->orWhere('content', 'like', '%' . $filters['search'] . '%');
             });
         }
-
+        $query->with(['comments' => function ($query) {
+            $query->with('replies');  
+        }]);
         $perPage = Setting::getValue('articles_per_page') ?? 10; 
 
         return $query->paginate($perPage);
@@ -47,10 +50,20 @@ class ArticleService
         $article->user_id = auth()->id();
         $article->status = 'draft';
         if (isset($data['image'])) {
-            $article->image_url = $data['image']->store('images', 'public');
+            $imageHash = hash('sha256', Str::random(40) . time());
+            $imageExtension = $data['image']->getClientOriginalExtension();
+            $imageName = $imageHash . '.' . $imageExtension;
+
+            $data['image']->storeAs('images', $imageName, 'public');  
+            $article->image_url = 'storage/images/' . $imageName;  
         }
         if (isset($data['video'])) {
-            $article->video_url = $data['video']->store('videos', 'public');
+            $videoHash = hash('sha256', Str::random(40) . time());
+            $videoExtension = $data['video']->getClientOriginalExtension();
+            $videoName = $videoHash . '.' . $videoExtension;
+
+            $data['video']->storeAs('videos', $videoName, 'public');  
+            $article->video_url = 'storage/videos/' . $videoName;  
         }
         $article->save();
         if (isset($data['tags'])) {
@@ -76,8 +89,7 @@ class ArticleService
 
         $article->save();
         if (isset($data['tags'])) {
-            $tags = Tag::find($data['tags']); 
-            $article->tags()->sync($tags);  
+            $article->tags()->sync($data['tags']);
         }
         return $article;
     }
